@@ -130,7 +130,7 @@ class DataFit():
         self.elmsphase = elmsphase
         
         if device in ['DIII-D','D3D']: self.device = 'D3D'
-        if device in ['HL-3','HL3']: self.device = 'HL3'
+        if device in ['HL-3','HL3','HL-2M']: self.device = 'HL3'
         if self.device == 'D3D':
             from D3D import fetch_data 
             from D3D.map_equ import equ_map
@@ -330,7 +330,27 @@ class DataFit():
                 efit_editions = [e.strip().split(':')[0] for e in efit_editions]
                 efit_editions = [e[1:] for e in efit_editions if 'EFIT' in e]
                 efit_editions+= [ 'EFITRT1','EFITRT2' ]
-                
+
+            #get a list of availible EFIT editions
+            if self.device == 'HL3':
+                #BUG is there a better way how to access all EFITS? 
+                try:
+                    self.MDSconn.openTree('hl2m', shot)
+                    # efit_editions = self.MDSconn.get('getnci(".EFIT**.*","path")').data()
+                    efit_editions = self.MDSconn.get('getnci(".EFIT_*","path")').data()
+                    self.MDSconn.closeTree('hl2m', shot)
+                    assert  len(efit_editions) > 0, 'error efitedit '+ efit_editions
+                except:
+                    efit_editions = []
+                try:
+                    if not isinstance(efit_editions[0],str):
+                        efit_editions = [e.decode() for e in efit_editions]
+                except:
+                    pass
+        
+                efit_editions = [e.strip().split(':')[0] for e in efit_editions]
+                efit_editions = [e[1:] for e in efit_editions if 'EFIT' in e]
+                efit_editions+= [ 'EFITRT1','EFITRT2' ]                
 
             if self.device == 'NSTX':
                 efit_names = []
@@ -359,6 +379,8 @@ class DataFit():
                 efits = ['ANALYSIS','EFIT20']+['EFIT%.2d'%i for i in range(1,10)] 
             if self.device == 'D3D':#for D3D
                 efits = ['EFIT02er','EFITS1','EFITS2','EFITS2er','EFIT_CAKE01','EFIT_CAKE02']+['EFIT%.2d'%i for i in range(1,10)] 
+            if self.device == 'HL3':#for HL3
+                efits = ['EFIT_HL3'] 
   
             
             for efit in efits:
@@ -387,6 +409,8 @@ class DataFit():
                     prefered_efit = 'LRDFIT09', 'ANALYSIS','EFIT20','EFIT01', 'EFIT02',    'EFIT03',  'EFIT04', efit_editions[0] 
                     if  self.device == 'NSTX':
                         prefered_efit =  'LRDFIT09', 'LRDFIT06', 'EFIT02', 'EFIT01'
+                    if  self.device == 'HL3':
+                        prefered_efit =  ['EFIT_HL3']
                     for pref_ef in prefered_efit:
                         if pref_ef in efit_editions:
                             break
@@ -1031,7 +1055,7 @@ class DataFit():
                 self.eqm._read_scalars()
                 self.eqm._read_profiles()
                 print('\t done in %.1fs'%(time.time()-T))
-     
+    
                 self.set_trange()
  
             

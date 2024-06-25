@@ -258,8 +258,7 @@ class data_loader:
         ts = self.RAW['TS']
         ts['systems'] = list(systems)
         systems = list(set(systems)-set(ts.keys()))
-    
-    
+            
         zshift =  0
         if options is not None:
             if 'TS position error' in options:
@@ -274,56 +273,45 @@ class data_loader:
             return ts
 
         print_line( '  * Fetching TS data ...')
-
-        
-        tree = 'ELECTRONS'
         norm={}
-        MDS_systems={'core':OrderedDict()}
-        
-        if self.shot<1070000000:
-            mdspath = '\ELECTRONS::TOP.YAG.RESULTS.GLOBAL.PROFILE:'
-            MDS_systems['core']['n_e']    = mdspath+'NE_RZ_T'
-            MDS_systems['core']['n_e_err']= mdspath+'NE_ERR_ZT'
-            MDS_systems['core']['T_e']    = mdspath+'TE_RZ_T'
-            MDS_systems['core']['T_e_err']= mdspath+'TE_ERR_ZT'
-        else:
-            mdspath = '\ELECTRONS::TOP.YAG_NEW.RESULTS.PROFILES.'
-            MDS_systems['core']['n_e']    = mdspath+'NE_RZ'
-            MDS_systems['core']['n_e_err']= mdspath+'NE_ERR'
-            MDS_systems['core']['T_e']    = mdspath+'TE_RZ'
-            MDS_systems['core']['T_e_err']= mdspath+'TE_ERR'
-        
         norm['core']= {'T_e':1e3,'n_e':1}
-        MDS_systems['core']['tvec']  =  'dim_of('+MDS_systems['core']['n_e']+',0)'
-        MDS_systems['core']['R']     = '\ELECTRONS::TOP.YAG.RESULTS.PARAM.R'
-        MDS_systems['core']['Z']     = mdspath+'Z_SORTED'
+        norm['edge'] = {'T_e':1,'n_e':1}
 
-        if self.shot>1000000000:
-            mdspath = '\ELECTRONS::TOP.YAG_EDGETS.'
-            MDS_systems['edge']= OrderedDict()
-            MDS_systems['edge']['n_e']    =mdspath+'RESULTS:NE'
-            MDS_systems['edge']['n_e_err']=mdspath+'RESULTS:NE:ERROR'
-            MDS_systems['edge']['T_e']    =mdspath+'RESULTS:TE'
-            MDS_systems['edge']['T_e_err']=mdspath+'RESULTS:TE:ERROR'
-            MDS_systems['edge']['tvec']  = 'dim_of('+MDS_systems['edge']['n_e']+',0)'
-            MDS_systems['edge']['R']     = '\ELECTRONS::TOP.YAG.RESULTS.PARAM.R'
-            MDS_systems['edge']['Z']     = mdspath+'DATA:FIBER_Z'
-            norm['edge'] = {'T_e':1,'n_e':1}
+        from pathlib import Path
+        import os
 
-        
-                    
+        shotstr = '{:05d}'.format(self.shot)
+        folder = (self.shot // 200) * 200
+        folderstr = '{:05d}'.format(folder)
 
-        TDI = []        
-        #prepare list of loaded signals
-        for system in systems:
-            if system in ts or system not in MDS_systems: 
-                continue
-            
-            ts['diag_names'][system]=['TS:'+system]
-            for sig,tdi in MDS_systems[system].items():
-                TDI.append(tdi)
+        if os.name == 'posix':
+            server = Path('/home/darkest/ExpDataBase/2MDAS')
+        elif os.name == 'nt':
+            server = Path('\\\\192.168.20.11\\2mdas')
 
-        out = mds_load(self.MDSconn, TDI, tree, self.shot)
+        filePath = server / folderstr / 'DATA' / (shotstr + 'TS.mat')
+
+        if not filePath.exists():
+            printe('TS data file not found!')
+            return
+        else:
+            from mat73 import loadmat
+            TSdata = loadmat(filePath)
+            Cne = TSdata['Cne']
+            Cne_er = TSdata['Cne_er']
+            CTe = TSdata['CTe']
+            CTe_er = TSdata['CTe_er']
+            Ene = TSdata['Ene']
+            Ene_er = TSdata['Ene_er']
+            ETe = TSdata['ETe']
+            ETe_er = TSdata['ETe_er']
+            cpts_time = TSdata['cpts_time']
+            ets_time = TSdata['ets_time']
+            LID = TSdata['LID']
+            loc = TSdata['loc']
+            countpoints = TSdata['countpoints']
+
+
         ne,ne_err,Te,Te_err,tvec,R,Z = np.asarray(out).reshape(-1,7).T
         
 

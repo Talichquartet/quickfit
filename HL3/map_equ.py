@@ -10,6 +10,7 @@ import sys,os
 from scipy import integrate
 from IPython import embed
 
+from copy import deepcopy
 
 def get_gc(nshot=None):
     ##shape of the vessel
@@ -111,6 +112,10 @@ class equ_map:
             gEQDSK = 'G_EQDSK'
             aEQDSK = 'A_EQDSK'
             time_scale = 1.0
+        elif exp.upper()=='HL3':
+            gEQDSK = 'G_EQDSK'
+            aEQDSK = 'A_EQDSK'
+            time_scale = 1.0
 
             
         else:
@@ -119,11 +124,16 @@ class equ_map:
 
         if diag.upper() == 'ANALYSIS' and exp == 'CMOD':
             root = '\\analysis::TOP.EFIT.RESULTS.'
+            self.gEQDSK = root+gEQDSK+'.'
+            self.aEQDSK = root+aEQDSK+'.'
+        elif diag.upper() == 'EFIT_HL3':
+            root = '\\EFIT_HL3::TOP.'
+            self.gEQDSK = root+'EFIT_'
+            self.aEQDSK = root+'EFIT_'
         else:
-            root = '\\'+diag+'::TOP.RESULTS.'
-            
-        self.gEQDSK = root+gEQDSK+'.'
-        self.aEQDSK = root+aEQDSK+'.'
+            root = '\\'+diag+'::TOP.RESULTS.' 
+            self.gEQDSK = root+gEQDSK+'.'
+            self.aEQDSK = root+aEQDSK+'.'
         # TODO: 添加HL3 mdsplus数据源中gEQDSK通道的前缀
 
         self.comment = ''
@@ -134,27 +144,41 @@ class equ_map:
             self.diag = diag
             #embed()
 
-            
-            # R, z of PFM cartesian grid
-            self.Rmesh = self.sf.get(self.gEQDSK+'R').data()
-            self.Zmesh = self.sf.get(self.gEQDSK+'Z').data()
-            # Time grid of equilibrium shotfile
-            self.t_eq  = np.atleast_1d(self.sf.get(self.gEQDSK+'GTIME').data()*time_scale)
-            self.valid = np.ones_like(self.t_eq,dtype='bool')
-            try:
-                self.comment  = self.sf.get('\\'+diag+'::TOP.COMMENTS').data()
-            except:
-                pass
-            
-            try:
-                atimes = self.sf.get(self.aEQDSK+'ATIME').data()*time_scale
-                chi2 = self.sf.get(self.aEQDSK+'CHISQ').data()
-                chi2_max = 200
-                self.valid &= ~np.in1d(self.t_eq,atimes[chi2 > chi2_max])&(self.t_eq>0)
-                self.t_eq = self.t_eq[self.valid]
+            if exp.upper()=='HL3':
+                # R, z of PFM cartesian grid
+                # self.Rmesh = self.sf.get(self.gEQDSK+'R').data()
+                # self.Zmesh = self.sf.get(self.gEQDSK+'Z').data() 
+                rgefit = np.linspace(1.05, 1.05 + 1.46, 129)  # R grids [m],'g' in variable name denotes 'grids'
+                zgefit = np.linspace(0 - 3.6 / 2, 0 + 3.6 / 2, 129)  # z grids [m]
+                self.Rmesh, self.Zmesh = np.meshgrid(rgefit, zgefit)     
+                # Time grid of equilibrium shotfile
+                self.t_eq  = np.atleast_1d(self.sf.get(root+'TIME').data()*time_scale)   
+                self.valid = np.ones_like(self.t_eq,dtype='bool')
+                try:
+                    self.comment  = self.sf.get('\\'+diag+'::TOP.COMMENTS').data()
+                except:
+                    pass 
+            else:
+                # R, z of PFM cartesian grid
+                self.Rmesh = self.sf.get(self.gEQDSK+'R').data()
+                self.Zmesh = self.sf.get(self.gEQDSK+'Z').data()
+                # Time grid of equilibrium shotfile
+                self.t_eq  = np.atleast_1d(self.sf.get(self.gEQDSK+'GTIME').data()*time_scale)
+                self.valid = np.ones_like(self.t_eq,dtype='bool')
+                try:
+                    self.comment  = self.sf.get('\\'+diag+'::TOP.COMMENTS').data()
+                except:
+                    pass
                 
-            except:
-                print('aEQDSK loading issue')
+                try:
+                    atimes = self.sf.get(self.aEQDSK+'ATIME').data()*time_scale
+                    chi2 = self.sf.get(self.aEQDSK+'CHISQ').data()
+                    chi2_max = 200
+                    self.valid &= ~np.in1d(self.t_eq,atimes[chi2 > chi2_max])&(self.t_eq>0)
+                    self.t_eq = self.t_eq[self.valid]
+                    
+                except:
+                    print('aEQDSK loading issue')
                 
                 
             if len(self.t_eq) < 2: raise Exception('too few valid timepoints in equlibrium')
@@ -224,18 +248,19 @@ class equ_map:
         
         self.ssq['Rmag'] = self.sf.get(self.gEQDSK+'RMAXIS').data()[self.valid]
         self.ssq['Zmag'] = self.sf.get(self.gEQDSK+'ZMAXIS').data()[self.valid]
-        separatrix = self.sf.get(self.gEQDSK+'BDRY').data()[self.valid]
-        self.ssq['Zunt'] = separatrix[:,:,1].min(1)
-        self.ssq['Zoben'] = separatrix[:,:,1].max(1)
+        # TODO:HL3
+        # separatrix = self.sf.get(self.gEQDSK+'BDRY').data()[self.valid]
+        # self.ssq['Zunt'] = separatrix[:,:,1].min(1)
+        # self.ssq['Zoben'] = separatrix[:,:,1].max(1)
 
-        try:
-            atimes = self.sf.get(self.aEQDSK+'ATIME').data()/1000
-            self.ssq['chi2'] = np.interp(self.t_eq, atimes,self.sf.get(self.aEQDSK+'CHISQ').data())
-            self.ssq['CONDNO'] = np.interp(self.t_eq, atimes,self.sf.get(self.aEQDSK+'CONDNO').data())
-            self.ssq['ERROR'] = np.interp(self.t_eq, atimes,self.sf.get(self.aEQDSK+'ERROR').data())
-            self.ssq['TERROR'] = np.interp(self.t_eq, atimes,self.sf.get(self.aEQDSK+'TERROR').data())
-        except:
-            pass
+        # try:
+        #     atimes = self.sf.get(self.aEQDSK+'ATIME').data()/1000
+        #     self.ssq['chi2'] = np.interp(self.t_eq, atimes,self.sf.get(self.aEQDSK+'CHISQ').data())
+        #     self.ssq['CONDNO'] = np.interp(self.t_eq, atimes,self.sf.get(self.aEQDSK+'CONDNO').data())
+        #     self.ssq['ERROR'] = np.interp(self.t_eq, atimes,self.sf.get(self.aEQDSK+'ERROR').data())
+        #     self.ssq['TERROR'] = np.interp(self.t_eq, atimes,self.sf.get(self.aEQDSK+'TERROR').data())
+        # except:
+        #     pass
 
     def _read_scalars(self):
 
@@ -257,12 +282,16 @@ class equ_map:
         #self.Ip = self.sf.get(self.gEQDSK+'CPASMA').data()
 
 # Pol. flux at mag axis, separatrix
-        self.psi0 = self.sf.get(self.gEQDSK+'SSIMAG').data()[self.valid]*2*np.pi
-        self.psix = self.sf.get(self.gEQDSK+'SSIBRY').data()[self.valid]*2*np.pi
-        self.ip = self.sf.get(self.gEQDSK+'CPASMA').data()[self.valid]
+        # self.psi0 = self.sf.get(self.gEQDSK+'SSIMAG').data()[self.valid]*2*np.pi
+        # self.psix = self.sf.get(self.gEQDSK+'SSIBRY').data()[self.valid]*2*np.pi
+        # self.ip = self.sf.get(self.gEQDSK+'CPASMA').data()[self.valid]
+        self.psi0 = self.sf.get(self.gEQDSK+'SIMAG').data()[self.valid]*2*np.pi
+        self.psix = self.sf.get(self.gEQDSK+'SIBRY').data()[self.valid]*2*np.pi
+        self.ip = self.sf.get(self.gEQDSK+'IP').data()[self.valid]
         self.orientation = 1#np.sign(np.mean(self.Ip))  #current orientation
-        self.Bt = self.sf.get(self.gEQDSK+'BCENTR').data()[self.valid]
-        self.R0 = np.mean(self.sf.get(self.gEQDSK+'RZERO').data())#[self.valid]
+        # self.Bt = self.sf.get(self.gEQDSK+'BCENTR').data()[self.valid]
+        self.Bt = self.sf.get(self.gEQDSK+'B0').data()[self.valid]
+        self.R0 = np.mean(self.sf.get(self.gEQDSK+'RCENTR').data())#[self.valid]
         self.BR = self.Bt/self.R0
         
         
@@ -286,14 +315,17 @@ class equ_map:
         self._read_scalars()
         from scipy.constants import mu_0
 
-
-        PSIN = self.sf.get(self.gEQDSK+'PSIN').data()
+        # TODO: HL-3 归一化PSIN
+        # PSIN = self.sf.get(self.gEQDSK+'PSIN').data()
+        PSIN = np.linspace(0,1,129)
         V0 = 1  #BUG!!! total volume of the plasma
 
         #import IPython 
         #IPython.embed()
 # Profiles
+        # TODO: HL-3 归一化PSIN
         self.pf  = (np.outer(PSIN,(self.psix-self.psi0))+self.psi0)
+        # self.pf  = deepcopy(self.pfm)
         q   = self.sf.get(self.gEQDSK+'QPSI').data()#[self.valid].T
         vol  =  V0*self.sf.get(self.gEQDSK+'RHOVN').data()**2#[self.valid].T**2
         fpol  = self.sf.get(self.gEQDSK+'FPOL').data()/mu_0*2*np.pi
@@ -302,7 +334,7 @@ class equ_map:
             q =  q.T
             vol =  vol.T
             fpol = fpol.T
- 
+
         
         self.q =  q[:,self.valid]
         self.vol =  vol[:,self.valid]
