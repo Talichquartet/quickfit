@@ -82,6 +82,7 @@ icon_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),'icons','')
 
 
 def printe(message):
+    # 将message以红色的形式打印到控制台上
     CSI="\x1B["
     reset=CSI+"m"
     red_start = CSI+"31;40m"
@@ -129,6 +130,7 @@ class DataFit():
         self.elmsphase = elmsphase
         
         if device in ['DIII-D','D3D']: self.device = 'D3D'
+        if device in ['HL-3','HL3']: self.device = 'HL3'
         if self.device == 'D3D':
             from D3D import fetch_data 
             from D3D.map_equ import equ_map
@@ -142,6 +144,9 @@ class DataFit():
             self.device = 'NSTX'
             from NSTX import fetch_data 
             from NSTX.map_equ import equ_map
+        elif self.device == 'HL3': 
+            from HL3 import fetch_data 
+            from HL3.map_equ import equ_map
                 
         else:
             raise Exception('Device "%s" was not implemented yet'%self.device)
@@ -278,6 +283,8 @@ class DataFit():
             ndig = 10
         elif self.device == 'AUG':
             ndig = 5
+        elif self.device == 'HL3':
+            ndig = 4
        
         if len(num) == ndig :
             if self.shot is not None:
@@ -345,7 +352,7 @@ class DataFit():
  
                 efit_editions = [n.split('.')[1] for n in efit_names]
 
-
+            # TODO: 补充HL3的efit_editions和efits信息
 
             efits  = []
             if self.device == 'CMOD':#for cmod
@@ -778,7 +785,6 @@ class DataFit():
             self.tstep = float(self.tstep_entry.get())/1e3
         elif tstep is not None and tstep != 'None':
             self.tstep = tstep
-     
         self.tbeg_entry.delete(0,tk.END)
         self.tend_entry.delete(0,tk.END)
         self.tstep_entry.delete(0,tk.END)
@@ -1406,9 +1412,11 @@ def main():
         tok_name = 'NSTX'
         mds_server = 'skylark.pppl.gov:8501'
     else:
-        tok_name = 'D3D'
-        mds_server='localhost'
-        print('Local installation of quickfit - DIII-D?')
+        # tok_name = 'D3D'
+        # mds_server='localhost'
+        tok_name = 'HL-3'
+        mds_server='172.30.20.10'
+        print('Local installation of quickfit - HL-3?')
                 
     
     import argparse

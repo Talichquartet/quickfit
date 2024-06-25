@@ -300,11 +300,11 @@ class data_loader:
         
         #VTN old diagnsotci is not supported!
  
-         if self.dd.Open('VTA',self.shot):
+        if self.dd.Open('VTA',self.shot):
             print('TS is not availible')
             return None
         
-        for sys in systems
+        for sys in systems:
             if sys == 'core':
                 tvec = self.dd.GetTimebase('TIM_CORE')
                 Z = self.dd.GetSignal('Z_core')
@@ -636,7 +636,7 @@ class data_loader:
         if not self.dd.Open('DCK',self.shot):#fridge corrected
             if not self.dd.Open('DCN',self.shot):
                 printe('DCN is not availible')
-                    return None
+                return None
 
         #Fetch data
         tvec = self.dd.GetTimebase('time')
