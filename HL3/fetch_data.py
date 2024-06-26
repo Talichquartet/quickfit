@@ -289,7 +289,11 @@ class data_loader:
         elif os.name == 'nt':
             server = Path('\\\\192.168.20.11\\2mdas')
 
-        filePath = server / folderstr / 'DATA' / (shotstr + 'TS.mat')
+        # filePath = server / folderstr / 'DATA' / (shotstr + 'TS.mat')
+
+        # TODO:HL3本地调试
+        # filePath = Path('/home/darkest/WorkDir/202312实验/ITB/TS/') / (shotstr + 'TS.mat')
+        filePath = next(Path('/home/darkest/WorkDir/202312实验/ITB/TS/').glob(shotstr + 'TS.[mM]at'), None)
 
         if not filePath.exists():
             printe('TS data file not found!')
@@ -311,9 +315,20 @@ class data_loader:
             loc = TSdata['loc']
             countpoints = TSdata['countpoints']
 
+            # 补零使LID的列数与Cne的列数相同
+            LID = np.pad(LID, (0, Cne.shape[1] - LID.shape[0]), mode='constant', constant_values=0)
+            loc = np.pad(loc, (0, Cne.shape[1] - loc.shape[0]), mode='constant', constant_values=0)
 
-        ne,ne_err,Te,Te_err,tvec,R,Z = np.asarray(out).reshape(-1,7).T
-        
+
+        # ne,ne_err,Te,Te_err,tvec,R,Z = np.asarray(out).reshape(-1,7).T
+        # 根据条件将矩阵分成两个矩阵
+        ne = [Cne[:, LID == 1].T,Ene[:, LID == 2].T]
+        ne_err = [Cne_er[:, LID == 1].T,Ene_er[:, LID == 2].T]
+        Te = [CTe[:, LID == 1].T,ETe[:, LID == 2].T]
+        Te_err = [CTe_er[:, LID == 1].T,ETe_er[:, LID == 2].T]
+        tvec = [cpts_time.T,ets_time.T]
+        R = [loc[LID == 1],1780*np.ones_like(loc[LID == 2])]  
+        Z = [0*np.ones_like(loc[LID == 1]),loc[LID == 2]]     
 
         for isys, sys in enumerate(systems):
             if len(tvec) <= isys or len(tvec[isys]) == 0: 
@@ -370,9 +385,9 @@ class data_loader:
             ts[sys]['Te'] = xarray.DataArray(Te[isys].T[valid]*norm[sys]['T_e'],dims=['time','channel'], attrs={'units':'eV','label':'T_e'})
             ts[sys]['Te_err'] = xarray.DataArray(Te_err[isys].T[valid]*norm[sys]['T_e'],dims=['time','channel'], attrs={'units':'eV'})
             ts[sys]['diags']= xarray.DataArray( np.tile(('TS:'+sys,), ne[isys].T[valid].shape),dims=['time','channel'])            
-            ts[sys]['R'] = xarray.DataArray(R0, dims=['channel'], attrs={'units':'m'})
-            ts[sys]['Z'] = xarray.DataArray(Z[isys],dims=['channel'], attrs={'units':'m'})
-            ts[sys]['time'] = xarray.DataArray(tvec[isys][valid],dims=['time'], attrs={'units':'s'})
+            ts[sys]['R'] = xarray.DataArray(R0, dims=['channel'], attrs={'units':'mm'})
+            ts[sys]['Z'] = xarray.DataArray(Z[isys],dims=['channel'], attrs={'units':'mm'})
+            ts[sys]['time'] = xarray.DataArray(tvec[isys][valid],dims=['time'], attrs={'units':'ms'})
             ts[sys]['channel'] = xarray.DataArray(channel,dims=['channel'], attrs={'units':'-'})
 
             rho = self.eqm.rz2rho(R0,Z[isys]+zshift,tvec[isys],self.rho_coord)
