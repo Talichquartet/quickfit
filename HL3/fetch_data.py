@@ -15,6 +15,11 @@ import re,sys
 np.seterr(all='raise')
 from IPython import embed
 
+from pathlib import Path
+import os
+from mat73 import loadmat as loadmat73
+from scipy.io import loadmat
+
 def print_line(string):
     sys.stdout.write(string)
     sys.stdout.flush()
@@ -120,8 +125,12 @@ class data_loader:
                 R,Z,T = np.hstack(R)[:,None], np.hstack(Z)[:,None],np.hstack(T)
                 
             else:
-                R = diag[sys]['R'].values.ravel()
-                Z = diag[sys]['Z'].values.ravel()
+                # R = diag[sys]['R'].values.ravel()
+                # Z = diag[sys]['Z'].values.ravel()
+                # T = diag[sys]['time'].values
+                # BUG: refl R shift 20240626
+                R = diag[sys]['R'].values
+                Z = diag[sys]['Z'].values
                 T = diag[sys]['time'].values
             
             #do mapping 
@@ -133,7 +142,9 @@ class data_loader:
                 for ch,ind in zip(diag[sys],I):
                     ch['rho'].values  = rho[ind,0]
             else:
-                rho = rho.reshape(T.shape+diag[sys]['R'].shape)
+                # rho = rho.reshape(T.shape+diag[sys]['R'].shape)
+                # BUG: refl R shift 20240626
+                rho = rho.reshape(diag[sys]['R'].shape)
                 diag[sys]['rho'].values  =  rho 
         
         diag['EQM'] = {'id':id(self.eqm),'dr':dr, 'dz':dz,'ed':self.eqm.diag}
@@ -274,11 +285,8 @@ class data_loader:
 
         print_line( '  * Fetching TS data ...')
         norm={}
-        norm['core']= {'T_e':1,'n_e':1e18}
-        norm['edge'] = {'T_e':1,'n_e':1e18}
-
-        from pathlib import Path
-        import os
+        norm['core']= {'T_e':1,'n_e':1e19}
+        norm['edge'] = {'T_e':1,'n_e':1e19}
 
         shotstr = '{:05d}'.format(self.shot)
         folder = (self.shot // 200) * 200
@@ -293,14 +301,13 @@ class data_loader:
 
         # TODO:HL3本地调试
         # filePath = Path('/home/darkest/WorkDir/202312实验/ITB/TS/') / (shotstr + 'TS.mat')
-        filePath = next(Path('/home/darkest/WorkDir/202312实验/ITB/TS/').glob(shotstr + 'TS.[mM]at'), None)
+        # filePath = next(Path('/home/darkest/WorkDir/202312实验/ITB/TS/').glob(shotstr + 'TS.[mM]at'), None)
 
         if not filePath.exists():
             printe('TS data file not found!')
             return
         else:
-            from mat73 import loadmat
-            TSdata = loadmat(filePath)
+            TSdata = loadmat73(filePath)
             Cne = TSdata['Cne']
             Cne_er = TSdata['Cne_er']
             CTe = TSdata['CTe']
@@ -506,20 +513,27 @@ class data_loader:
             return self.eq_mapping(self.RAW['REFL'], dr = r_shift)   
          
         print_line( '  * Fetching reflectometer data ...')
+        shotstr = '{:04d}'.format(self.shot)
+        filePath = next(Path('/home/darkest/WorkDir/202312实验/ITB/FMCW/').glob(shotstr + '*.[mM]at'), None)
 
         refl = self.RAW['REFL'] = {}
             
         refl['systems'] = ['FAST']
  
-        mdspath =  r'\rf::top.reflect:result:'
-        TDI = mdspath+'density',  mdspath+'radius', mdspath+'tavg', mdspath+'reliability'
+        # mdspath =  r'\rf::top.reflect:result:'
+        # TDI = mdspath+'density',  mdspath+'radius', mdspath+'tavg', mdspath+'reliability'
         
-        ne,R,tvec,msg = mds_load(self.MDSconn, TDI, 'RF', self.shot)
+        # ne,R,tvec,msg = mds_load(self.MDSconn, TDI, 'RF', self.shot)
         
-        if msg.item() == -1:
-            print("Unable to fetch reflectometer reliability!")
-        else:
-            print("SOL reflectometer reliability=%d" % (msg.item()))
+        # if msg.item() == -1:
+        #     print("Unable to fetch reflectometer reliability!")
+        # else:
+        #     print("SOL reflectometer reliability=%d" % (msg.item()))
+
+        FMCWdata = loadmat(filePath)
+        ne = FMCWdata['ne']
+        R = FMCWdata['r']
+        tvec = FMCWdata['t'].flatten()/1e3
 
         
         if np.size(ne) == 0:
