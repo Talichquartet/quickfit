@@ -274,8 +274,8 @@ class data_loader:
 
         print_line( '  * Fetching TS data ...')
         norm={}
-        norm['core']= {'T_e':1e3,'n_e':1}
-        norm['edge'] = {'T_e':1,'n_e':1}
+        norm['core']= {'T_e':1,'n_e':1e18}
+        norm['edge'] = {'T_e':1,'n_e':1e18}
 
         from pathlib import Path
         import os
@@ -289,7 +289,7 @@ class data_loader:
         elif os.name == 'nt':
             server = Path('\\\\192.168.20.11\\2mdas')
 
-        # filePath = server / folderstr / 'DATA' / (shotstr + 'TS.mat')
+        filePath = server / folderstr / 'DATA' / (shotstr + 'TS.Mat')
 
         # TODO:HL3本地调试
         # filePath = Path('/home/darkest/WorkDir/202312实验/ITB/TS/') / (shotstr + 'TS.mat')
@@ -317,7 +317,7 @@ class data_loader:
 
             # 补零使LID的列数与Cne的列数相同
             LID = np.pad(LID, (0, Cne.shape[1] - LID.shape[0]), mode='constant', constant_values=0)
-            loc = np.pad(loc, (0, Cne.shape[1] - loc.shape[0]), mode='constant', constant_values=0)
+            loc = np.pad(loc/1e3, (0, Cne.shape[1] - loc.shape[0]), mode='constant', constant_values=0)
 
 
         # ne,ne_err,Te,Te_err,tvec,R,Z = np.asarray(out).reshape(-1,7).T
@@ -326,8 +326,8 @@ class data_loader:
         ne_err = [Cne_er[:, LID == 1].T,Ene_er[:, LID == 2].T]
         Te = [CTe[:, LID == 1].T,ETe[:, LID == 2].T]
         Te_err = [CTe_er[:, LID == 1].T,ETe_er[:, LID == 2].T]
-        tvec = [cpts_time.T,ets_time.T]
-        R = [loc[LID == 1],1780*np.ones_like(loc[LID == 2])]  
+        tvec = [cpts_time.T/1e3,ets_time.T/1e3]
+        R = [loc[LID == 1],1.780*np.ones_like(loc[LID == 2])]  
         Z = [0*np.ones_like(loc[LID == 1]),loc[LID == 2]]     
 
         for isys, sys in enumerate(systems):
@@ -336,43 +336,44 @@ class data_loader:
                 continue
             
             #embed()
+            ts['diag_names'][sys]=['TS:'+sys]
             
-            
-            #these points will be ignored and not plotted (negative errobars )
-            valid_TS = np.isfinite(Te_err[isys])&np.isfinite(ne_err[isys])
-            valid_TS[valid_TS] &= (Te_err[isys][valid_TS]>0) & (Te[isys][valid_TS] > 0)
-            valid_TS[valid_TS] &= (ne_err[isys][valid_TS]>0) & (ne[isys][valid_TS] > 0)  & (ne_err[isys][valid_TS] <1e20)
+            # #these points will be ignored and not plotted (negative errobars )
+            # valid_TS = np.isfinite(Te_err[isys])&np.isfinite(ne_err[isys])
+            # valid_TS[valid_TS] &= (Te_err[isys][valid_TS]>0) & (Te[isys][valid_TS] > 0)
+            # valid_TS[valid_TS] &= (ne_err[isys][valid_TS]>0) & (ne[isys][valid_TS] > 0)  & (ne_err[isys][valid_TS] <1e20)
                         
-            if sys ==  'core':
-                #use average error between even and odd timeslices (i.e. for both lasers)
-                ne_err_mean = np.zeros_like(ne_err[isys][:,::2])
-                ne_err_mean[valid_TS[:, ::2]] += ne_err[isys][:, ::2][valid_TS[:, ::2]]
-                ne_err_mean[valid_TS[:,1::2]] += ne_err[isys][:,1::2][valid_TS[:,1::2]]
-                valid = valid_TS[:,1::2]|valid_TS[:,::2]
-                ne_err_mean[valid]/= np.int_(valid_TS[:,::2][valid])+np.int_(valid_TS[:,1::2][valid])
+            # if sys ==  'core':
+            #     #use average error between even and odd timeslices (i.e. for both lasers)
+            #     ne_err_mean = np.zeros_like(ne_err[isys][:,::2])
+            #     ne_err_mean[valid_TS[:, ::2]] += ne_err[isys][:, ::2][valid_TS[:, ::2]]
+            #     ne_err_mean[valid_TS[:,1::2]] += ne_err[isys][:,1::2][valid_TS[:,1::2]]
+            #     valid = valid_TS[:,1::2]|valid_TS[:,::2]
+            #     ne_err_mean[valid]/= np.int_(valid_TS[:,::2][valid])+np.int_(valid_TS[:,1::2][valid])
 
-                ne_err[isys][:, ::2] = ne_err_mean
-                ne_err[isys][:,1::2] = ne_err_mean
+            #     ne_err[isys][:, ::2] = ne_err_mean
+            #     ne_err[isys][:,1::2] = ne_err_mean
 
 
-            Te_err[isys][~valid_TS]  = -np.infty
-            ne_err[isys][~valid_TS]  = -np.infty
+            # Te_err[isys][~valid_TS]  = -np.infty
+            # ne_err[isys][~valid_TS]  = -np.infty
             
             
             
             
             
-            #core system do not measure well at low temperatures
-            if sys ==  'core':
-                too_low_Te = np.zeros_like(valid_TS)
-                too_low_Te[valid_TS] = Te[isys][valid_TS]*norm[sys]['T_e'] < 100 
-                Te_err[isys][too_low_Te] = np.infty
-                ne_err[isys][too_low_Te] = np.infty
+            # #core system do not measure well at low temperatures
+            # if sys ==  'core':
+            #     too_low_Te = np.zeros_like(valid_TS)
+            #     too_low_Te[valid_TS] = Te[isys][valid_TS]*norm[sys]['T_e'] < 100 
+            #     Te_err[isys][too_low_Te] = np.infty
+            #     ne_err[isys][too_low_Te] = np.infty
                 
                  
                 
             #store only time slices with some useful data
-            valid = ~np.all(ne_err[isys]==0,0)
+            # valid = ~np.all(ne_err[isys]==0,0)
+            valid = ~np.all(ne[isys]==0,0)
             
             
         
@@ -385,13 +386,13 @@ class data_loader:
             ts[sys]['Te'] = xarray.DataArray(Te[isys].T[valid]*norm[sys]['T_e'],dims=['time','channel'], attrs={'units':'eV','label':'T_e'})
             ts[sys]['Te_err'] = xarray.DataArray(Te_err[isys].T[valid]*norm[sys]['T_e'],dims=['time','channel'], attrs={'units':'eV'})
             ts[sys]['diags']= xarray.DataArray( np.tile(('TS:'+sys,), ne[isys].T[valid].shape),dims=['time','channel'])            
-            ts[sys]['R'] = xarray.DataArray(R0, dims=['channel'], attrs={'units':'mm'})
-            ts[sys]['Z'] = xarray.DataArray(Z[isys],dims=['channel'], attrs={'units':'mm'})
-            ts[sys]['time'] = xarray.DataArray(tvec[isys][valid],dims=['time'], attrs={'units':'ms'})
+            ts[sys]['R'] = xarray.DataArray(R0, dims=['channel'], attrs={'units':'m'})
+            ts[sys]['Z'] = xarray.DataArray(Z[isys],dims=['channel'], attrs={'units':'m'})
+            ts[sys]['time'] = xarray.DataArray(tvec[isys][valid],dims=['time'], attrs={'units':'s'})
             ts[sys]['channel'] = xarray.DataArray(channel,dims=['channel'], attrs={'units':'-'})
 
             rho = self.eqm.rz2rho(R0,Z[isys]+zshift,tvec[isys],self.rho_coord)
-            ts[sys]['rho'] = xarray.DataArray(rho,dims=['time','channel'], attrs={'units':'-'})
+            ts[sys]['rho'] = xarray.DataArray(rho[valid],dims=['time','channel'], attrs={'units':'-'})
 
  
         print('\t done in %.1fs'%(time()-T))

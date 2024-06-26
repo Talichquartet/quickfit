@@ -1454,7 +1454,7 @@ def main():
     parser.add_argument('--mdsplus', type=str,help='MDS+ server',default=mds_server )
     parser.add_argument('--elmsphase', help='Apply ELMs synchronisation - elm fraction',default=False,action='store_true')
     parser.add_argument('--elmstime', help='Apply ELMs synchronisation - elm time',default=False,action='store_true')
-    parser.add_argument('--map_coordinate', type=str,help='rho_pol, rho_tor, Psi_N, r_a',default='rho_tor')
+    parser.add_argument('--map_coordinate', type=str,help='rho_pol, rho_tor, Psi_N, r_a',default='rho_pol')
     parser.add_argument('--radial_resolution', type=int,help='Numberof radial grid points',default=101)
 
     

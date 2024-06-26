@@ -149,8 +149,10 @@ class equ_map:
                 # self.Rmesh = self.sf.get(self.gEQDSK+'R').data()
                 # self.Zmesh = self.sf.get(self.gEQDSK+'Z').data() 
                 rgefit = np.linspace(1.05, 1.05 + 1.46, 129)  # R grids [m],'g' in variable name denotes 'grids'
-                zgefit = np.linspace(0 - 3.6 / 2, 0 + 3.6 / 2, 129)  # z grids [m]
-                self.Rmesh, self.Zmesh = np.meshgrid(rgefit, zgefit)     
+                zgefit = np.linspace(0 - 3.02 / 2, 0 + 3.02 / 2, 129)  # z grids [m]
+                # zgefit = np.linspace(0 - 3.6 / 2, 0 + 3.6 / 2, 129)  # z grids [m]
+                # self.Rmesh, self.Zmesh = np.meshgrid(rgefit, zgefit)  
+                self.Rmesh, self.Zmesh = rgefit,zgefit
                 # Time grid of equilibrium shotfile
                 self.t_eq  = np.atleast_1d(self.sf.get(root+'TIME').data()*time_scale)   
                 self.valid = np.ones_like(self.t_eq,dtype='bool')
