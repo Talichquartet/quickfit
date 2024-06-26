@@ -596,35 +596,47 @@ class data_loader:
         self.RAW['ECE'][rate]['systems'] = ['ECE']
         
         
-        TDI = []
-        for k in range(0, 32):
-            TDI.append(r'frcece.data.ece%s%02d' % (rate, k + 1))
-            TDI.append('frcece.data.rmid_%02d' % (k + 1))
+        # TDI = []
+        # for k in range(0, 32):
+        #     TDI.append(r'frcece.data.ece%s%02d' % (rate, k + 1))
+        #     TDI.append('frcece.data.rmid_%02d' % (k + 1))
 
-        TDI.append(r'dim_of(frcece.data.ece%s%02d)' % (rate, 1))
-        TDI.append(r'dim_of(frcece.data.rmid_%02d)' % (1))
+        # TDI.append(r'dim_of(frcece.data.ece%s%02d)' % (rate, 1))
+        # TDI.append(r'dim_of(frcece.data.rmid_%02d)' % (1))
 
-        out = mds_load(self.MDSconn, TDI, 'electrons', self.shot)
+        # out = mds_load(self.MDSconn, TDI, 'electrons', self.shot)
         
-        Te,R = np.reshape(out, (-1,2)).T
+        # Te,R = np.reshape(out, (-1,2)).T
         
-        #downsample by a factor of 10
-        Te = [t[:len(t)//10*10].reshape(len(t)//10, 10).mean(1) for t in Te]
+        # #downsample by a factor of 10
+        # Te = [t[:len(t)//10*10].reshape(len(t)//10, 10).mean(1) for t in Te]
         
-        Te, tvec = Te[:-1], Te[-1]
-        R, Rtvec = R[:-1] ,  R[-1]
-        Te = np.vstack(Te).T*1e3 #eV
-        R = np.hstack(R)
-        Z = np.zeros_like(R)
+        # Te, tvec = Te[:-1], Te[-1]
+        # R, Rtvec = R[:-1] ,  R[-1]
+        # Te = np.vstack(Te).T*1e3 #eV
+        # R = np.hstack(R)
+        # Z = np.zeros_like(R)
+        # channel = np.arange(Te.shape[1])
+        # #embed()
+
+        # rho = self.eqm.rz2rho(R+dR_shift,Z,Rtvec,self.rho_coord)
+        # R   = interp1d(Rtvec,R,axis=0)(np.clip(tvec, *Rtvec[[0,-1]]))
+        # rho = interp1d(Rtvec, rho,axis = 0)(np.clip(tvec, *Rtvec[[0,-1]]))
+        # Z   = np.zeros_like(R)  
+
+        print_line( '  * ECE data ...')
+        shotstr = '{:04d}'.format(self.shot)
+        filePath = next(Path('/home/darkest/WorkDir/202312实验/ITB/ECE/').glob(shotstr + '*.[mM]at'), None)
+        ECEdata = loadmat(filePath)
+        Te = ECEdata['Te']*1e3
+        R = ECEdata['R']/1e2
+        tvec = ECEdata['t'].flatten()/1e3             
+        Z   = np.zeros_like(R)  
+        
+        rho = self.eqm.rz2rho(R+dR_shift,Z,tvec,self.rho_coord)
+
         channel = np.arange(Te.shape[1])
-        #embed()
 
-        rho = self.eqm.rz2rho(R+dR_shift,Z,Rtvec,self.rho_coord)
-        R   = interp1d(Rtvec,R,axis=0)(np.clip(tvec, *Rtvec[[0,-1]]))
-        rho = interp1d(Rtvec, rho,axis = 0)(np.clip(tvec, *Rtvec[[0,-1]]))
-        Z   = np.zeros_like(R)        
-        
-        
         Te_err = np.abs(Te)*0.05+50.  #my naive guess of errorbars
         ece['Te'] = xarray.DataArray(Te, coords=[tvec, channel], dims=['time','channel'], attrs={'units':'eV','label':'T_e'} )
         ece['Te_err'] = xarray.DataArray(Te_err, dims=['time','channel'], attrs={'units':'eV'} )
