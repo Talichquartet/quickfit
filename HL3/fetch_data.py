@@ -455,9 +455,9 @@ class data_loader:
 
             # rho,pro,perr,tvec = mds_load(self.MDSconn, TDI,tree, self.shot)
             
-            shotstr = '{:04d}'.format(self.shot)
+            shotstr = '{:05d}'.format(self.shot)
             filePath = next(Path('/home/darkest/WorkDir/202312实验/ITB/CXRS/').glob(shotstr + '*.[mM]at'), None)
-            CXRSdata = loadmat(filePath)
+            CXRSdata = loadmat73(filePath)
             Ti = CXRSdata['Ti'][:,1:]
             R = CXRSdata['CH2R']
             Z   = np.zeros_like(R)
@@ -466,8 +466,8 @@ class data_loader:
             
             Ti_upper = CXRSdata['Ti_upper'][:,1:]
             Ti_lower = CXRSdata['Ti_lower'][:,1:]
-            Vt_upper = CXRSdata['Vt_upper'][:,1:]
-            Vt_lower = CXRSdata['Vt_lower'][:,1:]
+            Vt_upper = CXRSdata['vt_upper'][:,1:]
+            Vt_lower = CXRSdata['vt_lower'][:,1:]
             
             Ti_err = (np.abs(Ti_upper - Ti)+np.abs(Ti_lower - Ti))/2
             Vt_err = (np.abs(Vt_upper - vtor)+np.abs(Vt_lower - vtor))/2
@@ -489,14 +489,14 @@ class data_loader:
             
             #exclude corrupted points
             valid = np.isfinite(Ti)&np.isfinite(Ti_err)
-            valid &= (rho <  .9)[None]#measurement too far outside are unreliable
+            valid &= (rho <  .9)#measurement too far outside are unreliable
             Ti[~np.isfinite(Ti)] = 0
             Ti_err[~valid] = -np.infty
             
             #negative ion temperature
             Ti[Ti < 0] = -np.infty
             #too high temperature
-            Ti[Ti > 10] = np.infty
+            Ti[Ti > 10*1e3] = np.infty
             #too fast rotation 
             vtor[np.abs(vtor) > 50*1e3] = np.infty
 
@@ -504,10 +504,12 @@ class data_loader:
             #outliers = (pro[3] < .5)|(perr[3] > .5)
             #perr[3,outliers] = np.inf
  
+            # TODO:lin
+
             hirex[sys] = xarray.Dataset(attrs={'system':sys})
             hirex[sys]['Ti'] = xarray.DataArray(Ti,dims=['time','bin'], attrs={'units':'eV','label':'T_i'})
             hirex[sys]['Ti_err'] = xarray.DataArray(Ti_err,dims=['time','bin'], attrs={'units':'eV'})
-            hirex[sys]['vtor'] = xarray.DataArray(vtor,dims=['time','bin'], attrs={'units':'m/s\,','label':'v_\varphi'})
+            hirex[sys]['vtor'] = xarray.DataArray(vtor,dims=['time','bin'], attrs={'units':'m/s\,','label':'v_\\varphi'})
             hirex[sys]['vtor_err'] = xarray.DataArray(Vt_err,dims=['time','bin'], attrs={'units':'eV'})
             hirex[sys]['diags']= xarray.DataArray(np.tile(('HIREX:'+sys,),Ti.shape),dims=['time','bin'])            
             hirex[sys]['rho'] = xarray.DataArray(rho,dims=['time','bin'], attrs={'units':'-'})
