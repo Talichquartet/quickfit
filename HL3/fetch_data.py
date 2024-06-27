@@ -448,12 +448,31 @@ class data_loader:
 
         
             # Load the nodes associated with inverted profile data
-            node_path = r'\{}::TOP.HIREXSR.ANALYSIS.{}{}'.format(tree,node,tht)
+            # node_path = r'\{}::TOP.HIREXSR.ANALYSIS.{}{}'.format(tree,node,tht)
     
-            TDI  = [node_path+':'+p for p in ('rho','pro','proerr')]
-            TDI += ['dim_of(%s,1)'%TDI[-1]]
+            # TDI  = [node_path+':'+p for p in ('rho','pro','proerr')]
+            # TDI += ['dim_of(%s,1)'%TDI[-1]]
 
-            rho,pro,perr,tvec = mds_load(self.MDSconn, TDI,tree, self.shot)
+            # rho,pro,perr,tvec = mds_load(self.MDSconn, TDI,tree, self.shot)
+            
+            shotstr = '{:04d}'.format(self.shot)
+            filePath = next(Path('/home/darkest/WorkDir/202312实验/ITB/CXRS/').glob(shotstr + '*.[mM]at'), None)
+            CXRSdata = loadmat(filePath)
+            Ti = CXRSdata['Ti'][:,1:]
+            R = CXRSdata['CH2R']
+            Z   = np.zeros_like(R)
+            tvec = CXRSdata['Ti'][:,0].flatten()/1e3
+            vtor = CXRSdata['Vi'][:,1:]
+            
+            Ti_upper = CXRSdata['Ti_upper'][:,1:]
+            Ti_lower = CXRSdata['Ti_lower'][:,1:]
+            Vt_upper = CXRSdata['Vt_upper'][:,1:]
+            Vt_lower = CXRSdata['Vt_lower'][:,1:]
+            
+            Ti_err = (np.abs(Ti_upper - Ti)+np.abs(Ti_lower - Ti))/2
+            Vt_err = (np.abs(Vt_upper - vtor)+np.abs(Vt_lower - vtor))/2
+            
+            rho = self.eqm.rz2rho(R,Z,tvec,self.rho_coord)
             
             if len(rho) == 0:
                 printe('Data for '+sys+' were not found')
@@ -463,34 +482,34 @@ class data_loader:
             nr = rho.shape[1]
 
  
-            tvec = tvec[:nt]
-            rho = rho[:nt,:nr]
-            pro = pro[:,:nt,:nr]
-            perr = perr[:,:nt,:nr]
+            # tvec = tvec[:nt]
+            # rho = rho[:nt,:nr]
+            # pro = pro[:,:nt,:nr]
+            # perr = perr[:,:nt,:nr]
             
             #exclude corrupted points
-            valid = np.isfinite(pro)&np.isfinite(perr)
+            valid = np.isfinite(Ti)&np.isfinite(Ti_err)
             valid &= (rho <  .9)[None]#measurement too far outside are unreliable
-            pro[~np.isfinite(pro)] = 0
-            perr[~valid] = -np.infty
+            Ti[~np.isfinite(Ti)] = 0
+            Ti_err[~valid] = -np.infty
             
             #negative ion temperature
-            perr[3][pro[3] < 0] = -np.infty
+            Ti[Ti < 0] = -np.infty
             #too high temperature
-            perr[3][pro[3] > 10] = np.infty
+            Ti[Ti > 10] = np.infty
             #too fast rotation 
-            perr[1][np.abs(pro[1]) > 50] = np.infty
+            vtor[np.abs(vtor) > 50*1e3] = np.infty
 
             # exclude obvious outliers            
             #outliers = (pro[3] < .5)|(perr[3] > .5)
             #perr[3,outliers] = np.inf
  
             hirex[sys] = xarray.Dataset(attrs={'system':sys})
-            hirex[sys]['Ti'] = xarray.DataArray(pro[3]*1e3,dims=['time','bin'], attrs={'units':'eV','label':'T_i'})
-            hirex[sys]['Ti_err'] = xarray.DataArray(perr[3]*1e3,dims=['time','bin'], attrs={'units':'eV'})
-            hirex[sys]['vtor'] = xarray.DataArray(pro[1]*1e3,dims=['time','bin'], attrs={'units':'m/s\,','label':'v_\varphi'})
-            hirex[sys]['vtor_err'] = xarray.DataArray(perr[1]*1e3,dims=['time','bin'], attrs={'units':'eV'})
-            hirex[sys]['diags']= xarray.DataArray(np.tile(('HIREX:'+sys,),pro[0].shape),dims=['time','bin'])            
+            hirex[sys]['Ti'] = xarray.DataArray(Ti,dims=['time','bin'], attrs={'units':'eV','label':'T_i'})
+            hirex[sys]['Ti_err'] = xarray.DataArray(Ti_err,dims=['time','bin'], attrs={'units':'eV'})
+            hirex[sys]['vtor'] = xarray.DataArray(vtor,dims=['time','bin'], attrs={'units':'m/s\,','label':'v_\varphi'})
+            hirex[sys]['vtor_err'] = xarray.DataArray(Vt_err,dims=['time','bin'], attrs={'units':'eV'})
+            hirex[sys]['diags']= xarray.DataArray(np.tile(('HIREX:'+sys,),Ti.shape),dims=['time','bin'])            
             hirex[sys]['rho'] = xarray.DataArray(rho,dims=['time','bin'], attrs={'units':'-'})
             hirex[sys]['time'] = xarray.DataArray(tvec,dims=['time'], attrs={'units':'s'})
             hirex[sys]['bin'] = xarray.DataArray(np.arange(nr),dims=['bin'])
