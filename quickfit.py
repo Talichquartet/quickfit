@@ -1450,7 +1450,7 @@ def main():
     parser.add_argument('--tmin',type=float, metavar='S', help='optional tmin', default=None)
     parser.add_argument('--tmax',type=float, metavar='S', help='optional tmax', default=None)
     parser.add_argument('--preload', help='optional',action='store_true')
-    parser.add_argument('--device', type=str,help='tokamak name (D3D, CMOD, NSTX or AUG)',default=tok_name)
+    parser.add_argument('--device', type=str,help='tokamak name (D3D, CMOD, NSTX AUG or HL-3)',default=tok_name)
     parser.add_argument('--mdsplus', type=str,help='MDS+ server',default=mds_server )
     parser.add_argument('--elmsphase', help='Apply ELMs synchronisation - elm fraction',default=False,action='store_true')
     parser.add_argument('--elmstime', help='Apply ELMs synchronisation - elm time',default=False,action='store_true')
