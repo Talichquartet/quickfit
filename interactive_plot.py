@@ -1162,7 +1162,8 @@ class FitPlot():
                 return
         elif not update:
             self.fig_3d=plt.figure('3D plot')
-            ax=p3.Axes3D(self.fig_3d)
+            # ax=p3.Axes3D(self.fig_3d)
+            ax = self.fig_3d.add_subplot(projection='3d')
             ax.set_xlabel(self.xlab,fontsize=self.fsize3d)
             ax.set_ylabel('Time [s]',fontsize=self.fsize3d)
         else:
