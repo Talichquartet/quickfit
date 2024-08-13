@@ -40,7 +40,6 @@ from grid_map import map2grid
 
 np.seterr(all='raise')
 
-
 #  fun, inversed fun, derivative
 transformations = OrderedDict()
 transformations['linear']   = lambda x:x,lambda x:x, lambda x:1

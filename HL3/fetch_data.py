@@ -489,7 +489,7 @@ class data_loader:
             
             #exclude corrupted points
             valid = np.isfinite(Ti)&np.isfinite(Ti_err)
-            valid &= (rho <  .9)#measurement too far outside are unreliable
+            # valid &= (rho <  .9)#measurement too far outside are unreliable
             Ti[~np.isfinite(Ti)] = 0
             Ti_err[~valid] = -np.infty
             
@@ -498,7 +498,7 @@ class data_loader:
             #too high temperature
             Ti[Ti > 10*1e3] = np.infty
             #too fast rotation 
-            vtor[np.abs(vtor) > 50*1e3] = np.infty
+            # vtor[np.abs(vtor) > 50*1e3] = np.infty
 
             # exclude obvious outliers            
             #outliers = (pro[3] < .5)|(perr[3] > .5)
@@ -509,13 +509,13 @@ class data_loader:
             hirex[sys] = xarray.Dataset(attrs={'system':sys})
             hirex[sys]['Ti'] = xarray.DataArray(Ti,dims=['time','bin'], attrs={'units':'eV','label':'T_i'})
             hirex[sys]['Ti_err'] = xarray.DataArray(Ti_err,dims=['time','bin'], attrs={'units':'eV'})
-            hirex[sys]['vtor'] = xarray.DataArray(vtor,dims=['time','bin'], attrs={'units':'m/s\,','label':'v_\\varphi'})
-            hirex[sys]['vtor_err'] = xarray.DataArray(Vt_err,dims=['time','bin'], attrs={'units':'eV'})
+            hirex[sys]['vtor'] = xarray.DataArray(vtor/1e3,dims=['time','bin'], attrs={'units':'km/s\,','label':'v_\\varphi'})
+            hirex[sys]['vtor_err'] = xarray.DataArray(Vt_err/1e3,dims=['time','bin'], attrs={'units':'km/s\,'})
             hirex[sys]['diags']= xarray.DataArray(np.tile(('HIREX:'+sys,),Ti.shape),dims=['time','bin'])            
             hirex[sys]['rho'] = xarray.DataArray(rho,dims=['time','bin'], attrs={'units':'-'})
             hirex[sys]['time'] = xarray.DataArray(tvec,dims=['time'], attrs={'units':'s'})
             hirex[sys]['bin'] = xarray.DataArray(np.arange(nr),dims=['bin'])
- 
+            
         print('\t done in %.1fs'%(time()-T))
 
         return hirex 
@@ -669,6 +669,8 @@ class data_loader:
         print('\t done in %.1fs'%(time()-T))
         self.RAW['ECE'][rate]['EQM'] = {'id':id(self.eqm),'dr':0, 'dz':0,'ed':self.eqm.diag}
 
+        # from scipy.io import savemat
+        # savemat('/home/darkest/WorkDir/202312实验/ITB/ECE/'+shotstr+'quickfit.mat',mdict={'R':R,'Z':Z,'rho':rho,"Te":Te,'t':tvec})
         return self.RAW['ECE'][rate]
 
 
