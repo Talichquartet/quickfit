@@ -703,10 +703,11 @@ class equ_map:
             index = ((coords.T - offset) / scaling).T
             Psi[jt] =  map_coordinates(self.pfm[:, :, i], index,
                                 mode='nearest',order=2, prefilter=True)
-   
         rho_out = self.rho2rho(Psi, t_in=t_in, extrapolate=extrapolate, coord_in='Psi',
                               coord_out=coord_out)
-        
+        # 240814, try to return HFS rho with negative sign
+        idx_hfs = (r_in < self.ssq['Rmag'][i]) & (z_in == 0)        
+        rho_out[idx_hfs] = -rho_out[idx_hfs]
  
         return rho_out
 
