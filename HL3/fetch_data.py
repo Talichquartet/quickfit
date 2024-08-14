@@ -338,6 +338,12 @@ class data_loader:
         Z = [0*np.ones_like(loc[LID == 1]),loc[LID == 2]]     
 
         for isys, sys in enumerate(systems):
+            # 加一个补丁, 20240814, 确保系统顺序是对的
+            if sys == 'core':
+                isys = 0
+            elif sys == 'edge':
+                isys = 1
+            
             if len(tvec) <= isys or len(tvec[isys]) == 0: 
                 ts['systems'].remove(sys)
                 continue
@@ -381,11 +387,10 @@ class data_loader:
             #store only time slices with some useful data
             # valid = ~np.all(ne_err[isys]==0,0)
             valid = ~np.all(ne[isys]==0,0)
-            
-            
-        
+                    
             channel = np.arange(Te_err[isys].shape[0])
             R0 = R[isys]*np.ones_like(channel)
+            rho = self.eqm.rz2rho(R0,Z[isys]+zshift,tvec[isys],self.rho_coord)            
             
             ts[sys] = xarray.Dataset(attrs={'system':sys})
             ts[sys]['ne'] = xarray.DataArray(ne[isys].T[valid]*norm[sys]['n_e'],dims=['time','channel'], attrs={'units':'m^{-3}','label':'n_e'})
@@ -398,7 +403,7 @@ class data_loader:
             ts[sys]['time'] = xarray.DataArray(tvec[isys][valid],dims=['time'], attrs={'units':'s'})
             ts[sys]['channel'] = xarray.DataArray(channel,dims=['channel'], attrs={'units':'-'})
 
-            rho = self.eqm.rz2rho(R0,Z[isys]+zshift,tvec[isys],self.rho_coord)
+
             ts[sys]['rho'] = xarray.DataArray(rho[valid],dims=['time','channel'], attrs={'units':'-'})
 
  
