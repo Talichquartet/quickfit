@@ -697,8 +697,10 @@ class DataFit():
                                   'elmsync':0,
                                   'sawteeth':1,
                                   'null_outer':0,
+                                  'null_inner':1,
                                   'elm_signal':self.default_elms_signal,
                                   'outside_rho':'1.0',
+                                  'inside_rho':'0.0',
                                   'pedestal_rho':'.95',
                                   'dr':'0.03',
                                   'dt':'',
@@ -997,7 +999,8 @@ class DataFit():
                         ('Remove ELMs; elms signal:','elmrem' ,'Remove points affected by elms' ),
                         ('ELMs sync.','elmsync' ,'Incorporate elms in the time smoothing' ),
                         ('Sawteeth [s]:','sawteeth' ,'Introduce discontinuties in the fit at sawtooth times'),
-                        ('Remove points for rho >','null_outer','Ignore measurements outside given radius')) 
+                        ('Remove points for rho >','null_outer','Ignore measurements outside given radius'),
+                        ('Remove points for rho <','null_inner','Ignore measurements inner given radius')) 
         frames = {}
         for name, var, descript in checkbuttons:
             frames[var] = tk.Frame(fit_opt_frame_down)
@@ -1013,6 +1016,10 @@ class DataFit():
                     textvariable=self.fit_options['outside_rho'])
 
         outside_rho_entry.pack(side=tk.LEFT, padx=0)
+        
+        # Entry for 'null_inner'，240814
+        inside_rho_entry = tk.Entry(frames['null_inner'], width=4, validate="key", validatecommand=(vcmd, '%P'), justify=tk.CENTER, textvariable=self.fit_options['inside_rho'])
+        inside_rho_entry.pack(side=tk.LEFT, padx=0)
         
 
         saw_time_entry = tk.Entry(frames['sawteeth'],justify=tk.RIGHT,  

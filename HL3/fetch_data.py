@@ -390,7 +390,7 @@ class data_loader:
                     
             channel = np.arange(Te_err[isys].shape[0])
             R0 = R[isys]*np.ones_like(channel)
-            rho = self.eqm.rz2rho(R0,Z[isys]+zshift,tvec[isys],self.rho_coord)            
+            rho = self.eqm.rz2rho(R0,Z[isys]+zshift,tvec[isys],self.rho_coord)          
             
             ts[sys] = xarray.Dataset(attrs={'system':sys})
             ts[sys]['ne'] = xarray.DataArray(ne[isys].T[valid]*norm[sys]['n_e'],dims=['time','channel'], attrs={'units':'m^{-3}','label':'n_e'})

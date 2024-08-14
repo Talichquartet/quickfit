@@ -785,12 +785,20 @@ class FitPlot():
 
                 self.options['elmrem_ind'] = False
 
+            # remove points in regions rho < 0
+            if self.fit_options['null_inner'].get():
+                rho_lim_in =  float(self.fit_options['inside_rho'].get()) 
+                zeroed_inner = self.plot_rho < rho_lim_in
+                self.m2g.Yerr.mask |= zeroed_inner
+            else:
+                zeroed_inner = False
+            
             #remove points in outer regions
             zeroed_outer = self.options['zeroed_outer']
             if self.fit_options['null_outer'].get():
                 if np.any(zeroed_outer):
                     self.m2g.Yerr.mask[zeroed_outer] = False
-                rho_lim =  float(self.fit_options['outside_rho'].get())
+                rho_lim =  float(self.fit_options['outside_rho'].get())                
                 zeroed_outer = self.plot_rho > rho_lim
                 self.m2g.Yerr.mask |= zeroed_outer
             elif np.any(zeroed_outer):
