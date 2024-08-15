@@ -75,7 +75,9 @@ class map2grid():
         self.valid   =  np.isfinite(self.Yerr.data)
         
  
-        valid_p =  self.valid[P.flat] & (W.flat != 0)&(R.ravel() < self.r_max)
+        # valid_p =  self.valid[P.flat] & (W.flat != 0)&(R.ravel() < self.r_max)
+        # 240815,fixed weight is negative bug.
+        valid_p =  self.valid[P.flat] & (W.flat != 0)&(R.ravel() < self.r_max)&(R.ravel() > self.r_min)
         self.n_points = np.sum(self.valid)  #BUG 
         
         #remove invalid points from P
