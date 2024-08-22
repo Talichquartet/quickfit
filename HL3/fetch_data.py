@@ -459,16 +459,26 @@ class data_loader:
             # TDI += ['dim_of(%s,1)'%TDI[-1]]
 
             # rho,pro,perr,tvec = mds_load(self.MDSconn, TDI,tree, self.shot)
-            
+            #修改之前的，从本地读取数据；
+            # shotstr = '{:05d}'.format(self.shot)
+            # filePath = next(Path('/home/darkest/WorkDir/202312实验/ITB/CXRS/').glob(shotstr + '*.[mM]at'), None)
+            # CXRSdata = loadmat73(filePath)
+
             shotstr = '{:05d}'.format(self.shot)
-            filePath = next(Path('/home/darkest/WorkDir/202312实验/ITB/CXRS/').glob(shotstr + '*.[mM]at'), None)
+            if os.name == 'posix':
+                server = Path('/home/darkest/ExpDataBase/image/2MDAS/CXRS')
+            elif os.name == 'nt':
+                server = Path('\\\\192.168.20.11\\image\\2MDAS\\CXRS')
+            filePath = server / (shotstr + 'cxrs.mat')
             CXRSdata = loadmat73(filePath)
+
+
             Ti = CXRSdata['Ti'][:,1:]
             R = CXRSdata['CH2R']
             Z   = np.zeros_like(R)
             tvec = CXRSdata['Ti'][:,0].flatten()/1e3
             vtor = CXRSdata['Vi'][:,1:]
-            
+          
             Ti_upper = CXRSdata['Ti_upper'][:,1:]
             Ti_lower = CXRSdata['Ti_lower'][:,1:]
             Vt_upper = CXRSdata['vt_upper'][:,1:]
