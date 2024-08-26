@@ -691,6 +691,8 @@ class equ_map:
 
         self._read_pfm()
         Psi = np.empty((nt_in,)+r_in.shape[1:], dtype=np.single)
+
+        rmag = np.empty((nt_in,)+r_in.shape[1:], dtype=np.single)
         
         scaling = np.array([dr, dz])
         offset  = np.array([self.Rmesh[0], self.Zmesh[0]])
@@ -703,10 +705,11 @@ class equ_map:
             index = ((coords.T - offset) / scaling).T
             Psi[jt] =  map_coordinates(self.pfm[:, :, i], index,
                                 mode='nearest',order=2, prefilter=True)
+            rmag[jt] = self.ssq['Rmag'][i]
         rho_out = self.rho2rho(Psi, t_in=t_in, extrapolate=extrapolate, coord_in='Psi',
                               coord_out=coord_out)
         # 240814, try to return HFS rho with negative sign
-        idx_hfs = (r_in < self.ssq['Rmag'][i]) & (z_in == 0)        
+        idx_hfs = (r_in < rmag) & (abs(z_in) < 0.1)        
         rho_out[idx_hfs] = -rho_out[idx_hfs]
  
         return rho_out

@@ -335,7 +335,7 @@ class data_loader:
         Te_err = [CTe_er[:, LID == 1].T,ETe_er[:, LID == 2].T]
         tvec = [cpts_time.T/1e3,ets_time.T/1e3]
         R = [loc[LID == 1],1.780*np.ones_like(loc[LID == 2])]  
-        Z = [0*np.ones_like(loc[LID == 1]),loc[LID == 2]]     
+        Z = [0*np.ones_like(loc[LID == 1]),-1*loc[LID == 2]]     
 
         for isys, sys in enumerate(systems):
             # 加一个补丁, 20240814, 确保系统顺序是对的
