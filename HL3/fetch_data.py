@@ -19,6 +19,9 @@ from pathlib import Path
 import os
 from mat73 import loadmat as loadmat73
 from scipy.io import loadmat
+from smb.SMBConnection import SMBConnection
+import platform
+import yaml
 
 def print_line(string):
     sys.stdout.write(string)
@@ -45,6 +48,40 @@ def mds_load(MDSconn,TDI, tree, shot):
 
     return data
 
+def smb_load(share_name,file_path,local_file_path):
+    credentials = read_credentials_yaml()
+    username = credentials.get('username')
+    password = credentials.get('password')
+
+    client_name = platform.uname().node
+    server_name = '172.30.20.11'
+    # Create an SMB connection
+    conn = SMBConnection(username, password, client_name, server_name,domain='swip',use_ntlm_v2=False,is_direct_tcp=True)
+    conn.connect(server_name,445)  #
+    # 确保文件夹存在，如果不存在则创建
+    local_file_path.parent.mkdir(parents=True, exist_ok=True)
+    # Read the file from the SMB share
+    with open(local_file_path, 'wb') as file_obj:
+        conn.retrieveFile(share_name, file_path, file_obj)
+    conn.close()
+    try:
+        data = loadmat73(local_file_path)
+    except Exception as e:
+        try:
+            data = loadmat(local_file_path)
+        except Exception as e:
+            data = None  # 或者处理错误
+    return data
+def read_credentials_yaml():
+    """从指定的 YAML 文件读取用户名和密码"""
+    credentials_file = Path.cwd() / 'HL3/_datatmp/credentials.yaml'
+    try:
+        with open(credentials_file, 'r') as f:
+            credentials = yaml.safe_load(f)
+            return credentials
+    except Exception as e:
+        print(f"读取凭据失败: {e}")
+        return None
 
 def default_settings(MDSconn, shot):
     '''Build a large dictionary with all settings.
@@ -465,12 +502,18 @@ class data_loader:
             # CXRSdata = loadmat73(filePath)
 
             shotstr = '{:05d}'.format(self.shot)
-            if os.name == 'posix':
-                server = Path('/home/darkest/ExpDataBase/image/2MDAS/CXRS')
-            elif os.name == 'nt':
-                server = Path('\\\\192.168.20.11\\image\\2MDAS\\CXRS')
-            filePath = server / (shotstr + 'cxrs.mat')
-            CXRSdata = loadmat73(filePath)
+            # if os.name == 'posix':
+            #     server = Path('/home/darkest/ExpDataBase/image/2MDAS/CXRS')
+            # elif os.name == 'nt':
+            #     server = Path('\\\\192.168.20.11\\image\\2MDAS\\CXRS')
+            # filePath = server / (shotstr + 'cxrs.mat')
+            # CXRSdata = loadmat73(filePath)
+
+            file_name = f"{shotstr}cxrs.mat"
+            file_path = f"2MDAS/CXRS/{file_name}"
+            local_file_path = Path.cwd() / "HL3/_datatmp" / file_path
+            CXRSdata=smb_load('image',file_path,local_file_path)
+            # done: use pysmb to get cxrs data 
 
 
             Ti = CXRSdata['Ti'][:,1:]
